@@ -1,0 +1,140 @@
+<apex:page showHeader="true" sidebar="true" standardController="Payment__c" extensions="PaymentManagerExtension" action="{!getActivePaymentsByContact}" tabStyle="Payment_Manager__tab">
+	<!-- styles and scripts -->
+	<head>
+		<apex:stylesheet value="{!$Resource.PPG}"/>
+		<script src="https://code.jquery.com/jquery-2.2.3.min.js" integrity="sha256-a23g1Nt4dtEYOj7bR+vTu7+T8VP13humZFBJNIYoEJo=" crossorigin="anonymous"></script>
+		<script src="{!URLFOR($Resource.PPGjs)}"></script>
+	</head>
+	<apex:form >
+		<!-- page action functions -->
+		<apex:actionFunction action="{!addNewPayment}" name="newPayment" reRender="thePageBlock,thePageMessages">
+			<apex:param name="contactId" assignTo="{!currentContactId}" value="currentId"/>
+		</apex:actionFunction>
+
+		<apex:actionFunction action="{!deletePayment}" name="deletePayment" reRender="thePageBlock,thePageMessages">
+			<apex:param name="contactId" assignTo="{!currentContactId}" value="currentId"/>
+		</apex:actionFunction>
+
+		<apex:actionFunction action="{!saveChanges}" name="saveChanges" reRender="thePageBlock,thePageMessages">
+			<apex:param name="contactId" assignTo="{!currentContactId}" value="currentId"/>
+		</apex:actionFunction>
+
+		<apex:pageMessages id="thePageMessages" />
+		
+		<!-- main data body -->
+		<apex:pageBlock mode="maindetail" title="Project Payment Manager" id="thePageBlock">
+			
+			<apex:repeat value="{!paymentWrapperList}" var="wrapper" rows="10">
+				<apex:outputPanel layout="block" styleClass="detail_background">
+					<apex:outputPanel layout="block" styleClass="padding_around">
+						<p class="padding_around_p">
+							<apex:outputLabel value="Applied Payment Summary for:" for="outputName" styleClass="output_label_text_title" />
+							<apex:outputPanel styleClass="padding_around output_panel_text_title">
+								<apex:outputField id="outputName" value="{!wrapper.contact.name}" />
+							</apex:outputPanel>
+						</p>
+						<p class="padding_around_p">
+							<apex:outputLabel value="Total Applied Payments:" for="outputTotal" styleClass="output_label_text" />
+							<apex:outputPanel styleClass="padding_around output_panel_text">
+								<apex:outputField id="outputTotal" value="{!wrapper.contact.Applied_Payment_Total__c}" />
+							</apex:outputPanel>
+						</p>
+						<p class="padding_around_p">
+							<apex:outputLabel value="Last Payment Date:" for="outputLastPayDate" styleClass="output_label_text" />
+							<apex:outputPanel styleClass="padding_around output_panel_text">
+								<apex:outputField id="outputLastPayDate" value="{!wrapper.contact.Last_Payment_Date__c}" />
+							</apex:outputPanel>
+						</p>
+					</apex:outputPanel>
+					
+					<apex:outputPanel layout="block" styleClass="table_label_text">Payment Detail (max 20 payments)</apex:outputPanel>
+					<table class="payment_table" title="Payment Detail">
+						<tr>
+							<th>Project Name</th><th>Payment Amount</th><th>Payment Date</th>
+						</tr>
+						<apex:repeat value="{!wrapper.paymentList}" var="p" rows="20">
+							<tr>
+								<td><apex:outputField value="{!p.Project__c}" /></td>
+								<td>
+									<apex:inputField value="{!p.Amount__c}" id="amountField" onblur="validateData();" 
+										html-child-error-id="{!p.Id}0" html-error-field="amountField"/>
+									<p class="padding_around_p" id="{!p.Id}0"></p>
+								</td>
+								<td>
+									<apex:inputField value="{!p.Payment_Date__c}" id="payDateField" onblur="validateData();" 
+										html-child-error-id="{!p.Id}1" html-error-field="payDateField"/>
+									<p class="padding_around_p" id="{!p.Id}1"></p>
+								</td>
+							</tr>
+						</apex:repeat>
+					</table>
+					<apex:outputPanel id="buttonPanel" layout="block" styleClass="table_align">
+						<span class="btn padding_panel" onclick="newPayment( '{!wrapper.contact.Id}');">Add New</span>
+						<span class="btn padding_panel" onclick="deletePayment( '{!wrapper.contact.Id}');">Delete Payment</span>
+						<span class="btn padding_panel" onclick="saveChanges( '{!wrapper.contact.Id}');">Save Changes</span>
+					</apex:outputPanel>
+				</apex:outputPanel>
+			</apex:repeat>
+
+			<!-- New Payment "modal" dialog -->
+			<apex:outputPanel id="newPaymentPanel">
+				<apex:outputPanel layout="block" styleClass="popup_background" rendered="{!renderNewPayment}">
+					<apex:outputPanel layout="block" styleClass="popup" rendered="{!renderNewPayment}">
+						<apex:outputPanel layout="block" styleClass="table_label_text">Add New Payment</apex:outputPanel>
+						<table class="payment_table" title="Add New Payment">
+							<tr>
+								<th>Project Name</th><th>Payment Amount</th><th>Payment Date</th>
+							</tr>
+							<tr>
+								<td>
+									<apex:inputField value="{!newPaymentRecord.Project__c}" />
+								</td>
+								<td>
+									<apex:inputField value="{!newPaymentRecord.Amount__c}" onblur="validateData();" 
+										html-child-error-id="{!newPaymentRecord.Project__c}0" html-error-field="amountField"/>
+									<p class="padding_around_p" id="{!newPaymentRecord.Project__c}0"></p>
+								</td>
+								<td>
+									<apex:inputField value="{!newPaymentRecord.Payment_Date__c}" onblur="validateData();" 
+										html-child-error-id="{!newPaymentRecord.Project__c}1" html-error-field="payDateField"/>
+									<p class="padding_around_p" id="{!newPaymentRecord.Project__c}1"></p>
+								</td>
+							</tr>
+						</table>
+						<apex:outputPanel layout="block" styleClass="table_align">
+							<apex:commandButton action="{!saveNewPayment}" value="Save" reRender="thePageBlock,thePageMessages" />
+							<apex:commandButton action="{!cancelNewPayment}" value="Cancel" reRender="thePageBlock,thePageMessages" immediate="true" />
+						</apex:outputPanel>
+					</apex:outputPanel>
+				</apex:outputPanel>
+			</apex:outputPanel>
+
+			<!-- Delete Payment "modal" dialog -->
+			<apex:outputPanel id="deletePaymentPanel">
+				<apex:outputPanel layout="block" styleClass="popup_background" rendered="{!renderDeletePayment}">
+					<apex:outputPanel layout="block" styleClass="popup" rendered="{!renderDeletePayment}">
+						<apex:outputPanel layout="block" styleClass="table_label_text">Delete Payments (max 20 payments)</apex:outputPanel>
+						<table class="payment_table" title="Delete Selected Payments">
+							<tr>
+								<th>Selected</th><th>Project Name</th><th>Payment Amount</th><th>Payment Date</th>
+							</tr>
+							<apex:repeat value="{!paymentsToDeleteList}" var="pTD" rows="20">
+								<tr>
+									<td><apex:inputCheckbox value="{!pTD.Delete__c}" /></td>
+									<td><apex:outputField value="{!pTD.Project__c}" /></td>
+									<td><apex:outputField value="{!pTD.Amount__c}" /></td>
+									<td><apex:outputField value="{!pTD.Payment_Date__c}" /></td>
+								</tr>
+							</apex:repeat>
+						</table>
+						<apex:outputPanel layout="block" styleClass="table_align">
+							<apex:commandButton action="{!deleteSelectedPayments}" value="Delete Selected" reRender="thePageBlock,thePageMessages" />
+							<apex:commandButton action="{!cancelDeletePayment}" value="Cancel" reRender="thePageBlock,thePageMessages" immediate="true" />
+						</apex:outputPanel>
+					</apex:outputPanel>
+				</apex:outputPanel>
+			</apex:outputPanel>
+				
+		</apex:pageBlock>
+	</apex:form>
+</apex:page>
